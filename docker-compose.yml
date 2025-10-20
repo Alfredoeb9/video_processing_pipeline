@@ -1,5 +1,9 @@
 services:
-
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
   api:
     build: ./api
     container_name: video_api
@@ -12,3 +16,18 @@ services:
       - STORAGE_PATH=/data
     volumes:
       - ./data:/data
+    depends_on:
+      - redis
+  worker:
+    build: ./worker
+    container_name: video_worker
+    restart: unless-stopped
+    environment:
+      - STORAGE_PATH=/data
+    volumes:
+      - ./data:/data
+    depends_on:
+      - redis
+
+volumes:
+  redisdata:

@@ -16,6 +16,8 @@ services:
       - STORAGE_PATH=/data
     volumes:
       - ./data:/data
+      - ./api:/app
+      - ./api/storage:/app/storage
     depends_on:
       - redis
   worker:

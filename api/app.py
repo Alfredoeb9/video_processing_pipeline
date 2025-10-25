@@ -21,11 +21,21 @@ celery = Celery(
 
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
-    contents = await file.read()
+    if file.content_type.split("/")[0] != "video":
+        raise HTTPException(status_code=400, detail="Uploaded file is not a video")
 
-    print(f"Received file: {file.filename} ({len(contents)} bytes)")
+    job_id = str(uuid.uuid4())
+    job_dir = STORAGE_PATH / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
 
-    return {"filename": file.filename, "size": len(contents)}
+    file_path = job_dir / file.filename
+    with file_path.open("wb") as f:
+        while chunk := await file.read(1024*1024):
+            f.write(chunk)
+
+    celery.send_task("worker.processor.process_video", args=[str(file_path), str(job_dir)])
+
+    return JSONResponse({"job_id": job_id, "filename": file.filename})
 
 @app.get("/status/{job_id}")
 def status(job_id: str):
